@@ -1,0 +1,50 @@
+version: '3.8'
+
+services:
+  mailpit:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        VERSION: ${VERSION:-dev}
+    container_name: mailpit
+    ports:
+      - "8025:8025"  # Web UI
+      - "1025:1025"  # SMTP server
+      - "1110:1110"  # POP3 server (optional)
+    environment:
+      # Database settings
+      - MP_DATABASE=/data/mailpit.db
+      # SMTP settings
+      - MP_SMTP_BIND_ADDR=0.0.0.0:1025
+      # Web UI settings
+      - MP_UI_BIND_ADDR=0.0.0.0:8025
+      # POP3 settings (optional)
+      - MP_POP3_BIND_ADDR=0.0.0.0:1110
+      # Max messages to store (default: 500)
+      - MP_MAX_MESSAGES=500
+      # UI authentication (optional - uncomment to enable)
+      # - MP_UI_AUTH_FILE=/config/htpasswd
+      # - MP_UI_TLS_CERT=/config/cert.pem
+      # - MP_UI_TLS_KEY=/config/key.pem
+    volumes:
+      - mailpit-data:/data
+      # Uncomment for authentication config
+      # - ./config:/config:ro
+    healthcheck:
+      test: ["/mailpit", "readyz"]
+      interval: 15s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - mailpit-network
+
+volumes:
+  mailpit-data:
+    driver: local
+
+networks:
+  mailpit-network:
+    driver: bridge

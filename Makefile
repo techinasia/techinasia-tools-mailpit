@@ -91,6 +91,36 @@ docker-run: ## Run Docker container locally
 		-p 1025:1025 \
 		${ECR_REPO}:latest
 
+# Docker Compose targets
+.PHONY: up
+up: ## Start mailpit with docker-compose
+	docker compose up -d
+	@echo "Mailpit started!"
+	@echo "Web UI: http://localhost:8025"
+	@echo "SMTP: localhost:1025"
+	@echo "POP3: localhost:1110"
+
+.PHONY: down
+down: ## Stop mailpit
+	docker compose down
+
+.PHONY: logs
+logs: ## Show mailpit logs
+	docker compose logs -f mailpit
+
+.PHONY: restart
+restart: ## Restart mailpit
+	docker compose restart mailpit
+
+.PHONY: ps
+ps: ## Show running containers
+	docker compose ps
+
+.PHONY: clean-compose
+clean-compose: ## Stop and remove all containers, networks, and volumes
+	docker compose down -v
+	@echo "Cleaned up all docker-compose resources"
+
 .PHONY: ecr-login
 ecr-login: ## Login to AWS ECR
 	aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${DOCKER_REGISTRY}
