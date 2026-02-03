@@ -2,8 +2,9 @@
 /send
 /sendmail/sendmail
 /server/ui/dist
-/Makefile
 /mailpit*
 /.idea
 *.old
 *.db
+config.mk
+.env
