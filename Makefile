@@ -16,6 +16,10 @@ DOCKER_REGISTRY := ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
 ECR_REPO := techinasia-tools/mailpit
 DOCKER_IMAGE := ${DOCKER_REGISTRY}/${ECR_REPO}
 
+# Multi-architecture build configuration
+PLATFORMS ?= linux/amd64,linux/arm64
+BUILDER_NAME ?= mailpit-builder
+
 BIN := mailpit
 FRONTEND_DEPS = \
 	package.json \
@@ -84,6 +88,60 @@ docker-build-tag: ## Build and tag Docker image for ECR
 		.
 	@echo "Built and tagged image: ${DOCKER_IMAGE}:${VERSION}"
 
+# Multi-architecture build targets
+.PHONY: buildx-setup
+buildx-setup: ## Setup buildx builder for multi-arch builds
+	@if ! docker buildx inspect ${BUILDER_NAME} > /dev/null 2>&1; then \
+		echo "Creating buildx builder: ${BUILDER_NAME}"; \
+		docker buildx create --name ${BUILDER_NAME} --driver docker-container --bootstrap --use; \
+	else \
+		echo "Buildx builder ${BUILDER_NAME} already exists"; \
+		docker buildx use ${BUILDER_NAME}; \
+	fi
+	docker buildx inspect --bootstrap
+
+.PHONY: buildx-remove
+buildx-remove: ## Remove buildx builder
+	docker buildx rm ${BUILDER_NAME} || true
+
+.PHONY: docker-build-multiarch
+docker-build-multiarch: buildx-setup ## Build multi-architecture Docker image (amd64, arm64)
+	docker buildx build \
+		--platform ${PLATFORMS} \
+		--build-arg VERSION=${VERSION} \
+		-t ${ECR_REPO}:${VERSION} \
+		-t ${ECR_REPO}:latest \
+		--load \
+		.
+	@echo "Built multi-arch image: ${ECR_REPO}:${VERSION}"
+	@echo "Platforms: ${PLATFORMS}"
+
+.PHONY: docker-build-multiarch-ecr
+docker-build-multiarch-ecr: buildx-setup ecr-login ## Build and tag multi-arch image for ECR (no push)
+	docker buildx build \
+		--platform ${PLATFORMS} \
+		--build-arg VERSION=${VERSION} \
+		-t ${DOCKER_IMAGE}:${VERSION} \
+		-t ${DOCKER_IMAGE}:latest \
+		.
+	@echo "Built multi-arch image for ECR: ${DOCKER_IMAGE}:${VERSION}"
+	@echo "Platforms: ${PLATFORMS}"
+	@echo "Note: Image not pushed. Use 'make docker-push-multiarch' to push."
+
+.PHONY: docker-push-multiarch
+docker-push-multiarch: buildx-setup ecr-login ## Build and push multi-arch Docker image to ECR
+	docker buildx build \
+		--platform ${PLATFORMS} \
+		--build-arg VERSION=${VERSION} \
+		-t ${DOCKER_IMAGE}:${VERSION} \
+		-t ${DOCKER_IMAGE}:latest \
+		--push \
+		.
+	@echo "Pushed multi-arch images to ECR:"
+	@echo "  ${DOCKER_IMAGE}:${VERSION}"
+	@echo "  ${DOCKER_IMAGE}:latest"
+	@echo "Platforms: ${PLATFORMS}"
+
 .PHONY: docker-run
 docker-run: ## Run Docker container locally
 	docker run -it --rm \
@@ -143,6 +201,9 @@ docker-pull: ecr-login ## Pull Docker image from ECR
 .PHONY: deploy
 deploy: docker-push ## Build and deploy to ECR (alias for docker-push)
 
+.PHONY: deploy-multiarch
+deploy-multiarch: docker-push-multiarch ## Build and deploy multi-arch images to ECR
+
 .PHONY: version
 version: ## Show current version
 	@echo "Version: ${VERSION}"
@@ -154,3 +215,5 @@ docker-info: ## Show Docker image information
 	@echo "ECR Repository: ${DOCKER_IMAGE}"
 	@echo "Version Tag:    ${VERSION}"
 	@echo "Latest Tag:     latest"
+	@echo "Platforms:      ${PLATFORMS}"
+	@echo "Builder Name:   ${BUILDER_NAME}"

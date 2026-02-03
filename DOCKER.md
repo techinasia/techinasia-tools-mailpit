@@ -79,6 +79,16 @@ make clean-compose
 | `make ecr-login` | Login to AWS ECR |
 | `make docker-pull` | Pull image from ECR |
 
+### Multi-Architecture Deployment Commands
+
+| Command | Description |
+|---------|-------------|
+| `make buildx-setup` | Setup buildx builder for multi-arch builds |
+| `make docker-build-multiarch` | Build multi-arch image locally |
+| `make docker-push-multiarch` | Build and push multi-arch to ECR |
+| `make deploy-multiarch` | Complete multi-arch deployment |
+| `make buildx-remove` | Remove buildx builder |
+
 ### Deploy to ECR
 
 One-command deployment:
@@ -91,6 +101,39 @@ This will:
 2. Build the Docker image
 3. Tag with version and latest
 4. Push to ECR repository: `techinasia-tools/mailpit`
+
+### Deploy Multi-Architecture Images to ECR
+
+For production deployments supporting both AMD64 and ARM64 architectures:
+
+```bash
+make deploy-multiarch
+```
+
+This will:
+1. Setup Docker buildx builder (if needed)
+2. Login to AWS ECR
+3. Build Docker images for `linux/amd64` and `linux/arm64`
+4. Push multi-arch manifest to ECR
+
+**Supported Platforms:**
+- `linux/amd64` (Intel/AMD processors)
+- `linux/arm64` (ARM processors, including AWS Graviton)
+
+**Custom platforms:**
+```bash
+# Build for specific platforms
+PLATFORMS=linux/amd64,linux/arm64,linux/arm/v7 make deploy-multiarch
+```
+
+**First-time setup:**
+```bash
+# Setup buildx builder
+make buildx-setup
+
+# Verify builder
+docker buildx ls
+```
 
 ### Configuration
 
