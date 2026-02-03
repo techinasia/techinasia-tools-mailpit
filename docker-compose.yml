@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   mailpit:
     build:
@@ -9,9 +7,9 @@ services:
         VERSION: ${VERSION:-dev}
     container_name: mailpit
     ports:
-      - "8025:8025"  # Web UI
-      - "1025:1025"  # SMTP server
-      - "1110:1110"  # POP3 server (optional)
+      - "8025:8025" # Web UI
+      - "1025:1025" # SMTP server
+      - "1110:1110" # POP3 server (optional)
     environment:
       # Database settings
       - MP_DATABASE=/data/mailpit.db
@@ -32,7 +30,7 @@ services:
       # Uncomment for authentication config
       # - ./config:/config:ro
     healthcheck:
-      test: ["/mailpit", "readyz"]
+      test: ["CMD", "/mailpit", "readyz"]
       interval: 15s
       timeout: 3s
       retries: 3
