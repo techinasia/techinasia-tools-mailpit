@@ -6,3 +6,4 @@
 /.idea
 *.old
 *.db
+config.mk

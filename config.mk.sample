@@ -1,0 +1,4 @@
+# AWS Configuration
+# Copy this file to config.mk and update with your AWS account details
+AWS_ACCOUNT_ID := 123456789012
+AWS_REGION := ap-southeast-1

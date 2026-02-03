@@ -1,3 +1,6 @@
+# Include configuration file
+-include config.mk
+
 # Try to get the commit hash from 1) git 2) fallback.
 LAST_COMMIT := $(or $(shell git rev-parse --short HEAD 2> /dev/null),"dev")
 
@@ -6,13 +9,12 @@ VERSION := $(or $(MAILPIT_VERSION),$(shell git describe --tags --abbrev=0 2> /de
 
 BUILDSTR := ${VERSION} (\#${LAST_COMMIT} $(shell date -u +"%Y-%m-%dT%H:%M:%S%z"))
 
-# Docker configuration
-DOCKER_REGISTRY ?= 963975194089.dkr.ecr.ap-southeast-1.amazonaws.com
+# Docker configuration (can be overridden in config.mk)
+AWS_ACCOUNT_ID ?= 123456789012
+AWS_REGION ?= ap-southeast-1
+DOCKER_REGISTRY := ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
 ECR_REPO := techinasia-tools/mailpit
 DOCKER_IMAGE := ${DOCKER_REGISTRY}/${ECR_REPO}
-
-# Default AWS region
-AWS_REGION ?= ap-southeast-1
 
 BIN := mailpit
 FRONTEND_DEPS = \
@@ -30,6 +32,19 @@ help: ## Show this help message
 	@echo ''
 	@echo 'Available targets:'
 	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "  %-20s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
+	@echo ''
+	@echo 'Configuration:'
+	@echo '  Copy config.mk.sample to config.mk and update AWS_ACCOUNT_ID'
+
+.PHONY: config
+config: ## Create config.mk from sample
+	@if [ -f config.mk ]; then \
+		echo "config.mk already exists"; \
+	else \
+		cp config.mk.sample config.mk; \
+		echo "Created config.mk from config.mk.sample"; \
+		echo "Please update AWS_ACCOUNT_ID in config.mk"; \
+	fi
 
 .PHONY: build
 build: $(BIN) ## Build the mailpit binary
